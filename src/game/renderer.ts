@@ -32,21 +32,28 @@ function blinkVisible(timeLeft: number, hz: number): boolean {
   return Math.floor(timeLeft * hz * 2) % 2 === 0;
 }
 
-export function drawBackground(ctx: CanvasRenderingContext2D, view: View, R: number): void {
+export function drawBackground(ctx: CanvasRenderingContext2D, view: View, orbitR: number): void {
   ctx.fillStyle = COLORS.bg;
   ctx.fillRect(-view.width / 2, -view.height / 2, view.width, view.height);
   ctx.strokeStyle = COLORS.orbit;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(0, 0, R, 0, TAU);
+  ctx.arc(0, 0, orbitR, 0, TAU);
   ctx.stroke();
 }
 
-export function drawPlayer(ctx: CanvasRenderingContext2D, p: Player, R: number, alpha: number): void {
+/** orbitR: current (interpolated) orbit radius. baseR: reference radius the player's size scales with. */
+export function drawPlayer(
+  ctx: CanvasRenderingContext2D,
+  p: Player,
+  orbitR: number,
+  baseR: number,
+  alpha: number,
+): void {
   if (p.invincibleLeft > 0 && !blinkVisible(p.invincibleLeft, CONFIG.player.blinkHz)) return;
   const angle = p.angle.at(alpha);
-  const pos = orbitPoint(angle, R);
-  const s = CONFIG.player.sizeRatio * R;
+  const pos = orbitPoint(angle, orbitR);
+  const s = CONFIG.player.sizeRatio * baseR;
   ctx.save();
   ctx.translate(pos.x, pos.y);
   ctx.rotate(angle + (p.dir * Math.PI) / 2); // nose points along the direction of travel
@@ -87,14 +94,16 @@ export function drawAsteroid(ctx: CanvasRenderingContext2D, a: Asteroid, alpha: 
   ctx.restore();
 }
 
-export function drawPickup(ctx: CanvasRenderingContext2D, item: Pickup, R: number): void {
-  const left = CONFIG.pickup.lifeSec - item.age;
-  if (left < CONFIG.pickup.blinkSec && !blinkVisible(left, CONFIG.pickup.blinkHz)) return;
-  const pos = orbitPoint(item.angle, R);
-  const r = CONFIG.pickup.radiusRatio * R;
+export function drawPickup(
+  ctx: CanvasRenderingContext2D,
+  item: Pickup,
+  baseR: number,
+  alpha: number,
+): void {
+  const r = CONFIG.pickup.radiusRatio * baseR;
   const color = COLORS.pickup[item.kind];
   ctx.save();
-  ctx.translate(pos.x, pos.y);
+  ctx.translate(item.x.at(alpha), item.y.at(alpha));
   ctx.fillStyle = color;
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
@@ -148,6 +157,9 @@ export function drawHud(
   view: View,
   hp: number,
   score: number,
+  stage: number,
+  /** 1 right after a stage change, fading to 0. */
+  stageFlash: number,
 ): void {
   const unit = Math.min(view.width, view.height);
   const pad = unit * 0.05;
@@ -160,7 +172,33 @@ export function drawHud(
     ctx.arc(left + pip + i * pip * 2.8, top + pip, pip, 0, TAU);
     ctx.fill();
   }
-  text(ctx, String(Math.floor(score)), view.width / 2 - pad, top + pip, unit * 0.06, COLORS.text, "right", "700");
+  const right = view.width / 2 - pad;
+  text(ctx, String(Math.floor(score)), right, top + pip, unit * 0.06, COLORS.text, "right", "700");
+  const flashing = stageFlash > 0;
+  text(
+    ctx,
+    `STAGE ${stage}`,
+    right,
+    top + pip + unit * 0.06,
+    unit * 0.032 * (1 + 0.35 * stageFlash),
+    flashing ? COLORS.pickup.score : COLORS.textDim,
+    "right",
+    flashing ? "800" : "600",
+  );
+}
+
+export function drawDebug(ctx: CanvasRenderingContext2D, view: View, lines: string[]): void {
+  const size = Math.max(11, Math.min(view.width, view.height) * 0.028);
+  ctx.font = `${Math.round(size)}px ui-monospace, Consolas, monospace`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "rgba(232, 236, 255, 0.75)";
+  const x = -view.width / 2 + size;
+  let y = view.height / 2 - size;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    ctx.fillText(lines[i], x, y);
+    y -= size * 1.3;
+  }
 }
 
 export function drawTitle(ctx: CanvasRenderingContext2D, view: View, best: number): void {

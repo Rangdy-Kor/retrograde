@@ -4,6 +4,7 @@ import { createInput } from "./engine/input.ts";
 import { createLoop } from "./engine/loop.ts";
 import { SceneManager } from "./engine/scene.ts";
 import { CONFIG } from "./game/config.ts";
+import { parseDebugOptions } from "./game/debug.ts";
 import { TitleScene } from "./game/scenes/title.ts";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game");
@@ -28,5 +29,5 @@ document.addEventListener("visibilitychange", () => {
   else loop.resetClock();
 });
 
-scenes.set(new TitleScene({ view, scenes }));
+scenes.set(new TitleScene({ view, scenes, debug: parseDebugOptions(location.search) }));
 loop.start();

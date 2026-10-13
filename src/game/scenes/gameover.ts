@@ -1,7 +1,7 @@
 import type { Action } from "../../engine/input.ts";
 import type { Scene } from "../../engine/scene.ts";
 import { CONFIG } from "../config.ts";
-import { orbitRadius, type GameContext } from "../context.ts";
+import { baseRadius, type GameContext } from "../context.ts";
 import { drawBackground, drawGameOver } from "../renderer.ts";
 import { PlayScene } from "./play.ts";
 
@@ -24,7 +24,7 @@ export class GameOverScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx, this.g.view, orbitRadius(this.g.view));
+    drawBackground(ctx, this.g.view, baseRadius(this.g.view));
     drawGameOver(ctx, this.g.view, this.score, this.best, this.isNewBest, this.lock <= 0);
   }
 

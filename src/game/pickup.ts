@@ -1,12 +1,24 @@
-import { TAU, randRange, weightedIndex } from "../engine/math.ts";
+import { Interp } from "../engine/interp.ts";
+import { TAU, randRange, randSign, weightedIndex } from "../engine/math.ts";
 import { CONFIG } from "./config.ts";
+import { planTrajectory, type Trajectory } from "./trajectory.ts";
 import type { PickupKind } from "./types.ts";
 
 export interface Pickup {
   kind: PickupKind;
-  /** Angle on the orbit, radians. */
-  angle: number;
-  age: number;
+  x: Interp;
+  y: Interp;
+  vx: number;
+  vy: number;
+  /** Distance (px) left until fully off screen; removed at 0. */
+  travelLeft: number;
+}
+
+export interface PickupSpawnContext {
+  baseR: number;
+  targetR: number;
+  halfW: number;
+  halfH: number;
 }
 
 const KINDS: PickupKind[] = ["heal", "score", "bomb"];
@@ -18,20 +30,42 @@ function pickKind(hp: number): PickupKind {
   return KINDS[weightedIndex(weights)];
 }
 
+function createPickup(kind: PickupKind, baseR: number, traj: Trajectory): Pickup {
+  const speed = CONFIG.pickup.speed * baseR;
+  return {
+    kind,
+    x: new Interp(traj.x),
+    y: new Interp(traj.y),
+    vx: traj.ux * speed,
+    vy: traj.uy * speed,
+    travelLeft: traj.travel,
+  };
+}
+
+/** Advances one step. Returns false once the pickup has left the screen. */
+export function updatePickup(p: Pickup, dt: number): boolean {
+  p.x.push(p.x.cur + p.vx * dt);
+  p.y.push(p.y.cur + p.vy * dt);
+  p.travelLeft -= Math.hypot(p.vx, p.vy) * dt;
+  return p.travelLeft > 0;
+}
+
 export class PickupSpawner {
   private timer: number = CONFIG.pickup.firstDelaySec;
 
-  /** Returns a new pickup when it is time to spawn one. */
-  update(dt: number, activeCount: number, playerAngle: number, hp: number): Pickup | null {
+  /** The timer only runs while no pickup is on screen. */
+  update(dt: number, activeCount: number, hp: number, ctx: PickupSpawnContext): Pickup | null {
     if (activeCount >= CONFIG.pickup.maxActive) return null;
     this.timer -= dt;
     if (this.timer > 0) return null;
+
+    // d <= dMax * targetR < targetR, so the path always crosses the orbit.
+    const d = randRange(0, CONFIG.pickup.dMax) * ctx.targetR;
+    const pad = CONFIG.pickup.radiusRatio * ctx.baseR + CONFIG.asteroid.spawnPadding;
+    const traj = planTrajectory(d, Math.random() * TAU, randSign(), ctx.halfW, ctx.halfH, pad);
+    if (!traj) return null;
+
     this.timer = randRange(CONFIG.pickup.intervalSec.min, CONFIG.pickup.intervalSec.max);
-    const gap = CONFIG.pickup.minAngleGap;
-    return {
-      kind: pickKind(hp),
-      angle: playerAngle + randRange(gap, TAU - gap),
-      age: 0,
-    };
+    return createPickup(pickKind(hp), ctx.baseR, traj);
   }
 }
