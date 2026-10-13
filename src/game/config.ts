@@ -18,8 +18,13 @@ export const CONFIG = {
   },
 
   player: {
-    /** rad/s. Unchanged when the orbit shrinks. */
+    /**
+     * Angular speed (rad/s) on the full-size orbit. Together with baseR this defines the base
+     * linear speed (angularSpeed * baseR); the actual angular speed is linear speed / current radius.
+     */
     angularSpeed: 2.2,
+    /** Angular speed is clamped so one lap never takes less than this. */
+    minLapSec: 1.3,
     maxHp: 3,
     invincibleSec: 1,
     blinkHz: 8,
@@ -69,6 +74,8 @@ export const CONFIG = {
     /** Uncapped: asteroids per second = base + slope * D. Late-game attrition comes from this. */
     spawnRate: { base: 1.4, slope: 0.55 },
     speedMul: { start: 1, max: 1.8, scale: 4 },
+    /** Player linear speed multiplier; applies immediately when the stage changes. */
+    playerSpeedMul: { start: 1, max: 1.3, scale: 4 },
     threatRatio: { start: 0.5, max: 0.85, scale: 4 },
     smallShare: { start: 0.3, max: 0.6, scale: 5 },
     /** Target orbit radius as a fraction of baseR. */

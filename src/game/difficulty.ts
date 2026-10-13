@@ -6,6 +6,8 @@ export interface Factors {
   /** Asteroids per second. Uncapped. */
   spawnRate: number;
   speedMul: number;
+  /** Player linear speed multiplier. */
+  playerSpeedMul: number;
   threatRatio: number;
   /** Share of asteroids that are small. */
   smallShare: number;
@@ -34,6 +36,7 @@ export function dToFactors(D: number): Factors {
   return {
     spawnRate: c.spawnRate.base + c.spawnRate.slope * D,
     speedMul: saturate(c.speedMul, D),
+    playerSpeedMul: saturate(c.playerSpeedMul, D),
     threatRatio: saturate(c.threatRatio, D),
     smallShare: saturate(c.smallShare, D),
     orbitRatio: saturate(c.orbitRatio, D),

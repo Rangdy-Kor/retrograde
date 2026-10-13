@@ -1,5 +1,6 @@
 import type { Action } from "../../engine/input.ts";
 import type { Scene } from "../../engine/scene.ts";
+import { TAU } from "../../engine/math.ts";
 import { getNumber, setNumber } from "../../engine/storage.ts";
 import { updateAsteroid, type Asteroid } from "../asteroid.ts";
 import { playerHitsAsteroid, playerHitsPickup } from "../collision.ts";
@@ -8,7 +9,14 @@ import { baseRadius, type GameContext } from "../context.ts";
 import { dToFactors, stageOf, stageToD, type Factors } from "../difficulty.ts";
 import { createOrbit, updateOrbit } from "../orbit.ts";
 import { PickupSpawner, updatePickup, type Pickup } from "../pickup.ts";
-import { createPlayer, damagePlayer, flipPlayer, healPlayer, updatePlayer } from "../player.ts";
+import {
+  createPlayer,
+  damagePlayer,
+  flipPlayer,
+  healPlayer,
+  playerAngularSpeed,
+  updatePlayer,
+} from "../player.ts";
 import {
   drawAsteroid,
   drawBackground,
@@ -64,7 +72,7 @@ export class PlayScene implements Scene {
     if (this.stageFlash > 0) this.stageFlash = Math.max(0, this.stageFlash - dt);
 
     updateOrbit(this.orbit, dt);
-    updatePlayer(this.player, dt);
+    updatePlayer(this.player, dt, this.angularSpeed());
 
     const f = this.factors;
     this.asteroids.push(
@@ -97,6 +105,10 @@ export class PlayScene implements Scene {
     this.updateStage();
 
     if (this.player.hp <= 0) this.gameOver();
+  }
+
+  private angularSpeed(): number {
+    return playerAngularSpeed(this.factors.playerSpeedMul, this.orbit.ratio.cur);
   }
 
   /** Difficulty only changes when the stage does; existing asteroids keep their values. */
@@ -174,6 +186,7 @@ export class PlayScene implements Scene {
     drawDebug(ctx, this.g.view, [
       `stage ${this.stage}  D ${this.D.toFixed(2)}`,
       `spawn ${f.spawnRate.toFixed(2)}/s  speed x${f.speedMul.toFixed(2)}`,
+      `player x${f.playerSpeedMul.toFixed(2)}  lap ${(TAU / this.angularSpeed()).toFixed(2)}s`,
       `threat ${f.threatRatio.toFixed(2)}  small ${f.smallShare.toFixed(2)}`,
       `R ${orbitR.toFixed(0)} -> ${targetR.toFixed(0)} (base ${baseR.toFixed(0)})`,
     ]);

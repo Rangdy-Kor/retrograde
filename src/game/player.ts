@@ -1,4 +1,5 @@
 import { Interp } from "../engine/interp.ts";
+import { TAU } from "../engine/math.ts";
 import { CONFIG } from "./config.ts";
 
 export interface Player {
@@ -18,8 +19,18 @@ export function createPlayer(): Player {
   };
 }
 
-export function updatePlayer(p: Player, dt: number): void {
-  p.angle.push(p.angle.cur + p.dir * CONFIG.player.angularSpeed * dt);
+/**
+ * The player moves at a fixed linear speed (base linear speed * speedMul), so the
+ * angular speed grows as the orbit shrinks: omega = v / R. Capped by minLapSec.
+ * baseR cancels out because the base linear speed is angularSpeed * baseR.
+ */
+export function playerAngularSpeed(speedMul: number, orbitRatio: number): number {
+  const omega = (CONFIG.player.angularSpeed * speedMul) / orbitRatio;
+  return Math.min(omega, TAU / CONFIG.player.minLapSec);
+}
+
+export function updatePlayer(p: Player, dt: number, angularSpeed: number): void {
+  p.angle.push(p.angle.cur + p.dir * angularSpeed * dt);
   if (p.invincibleLeft > 0) p.invincibleLeft = Math.max(0, p.invincibleLeft - dt);
 }
 
